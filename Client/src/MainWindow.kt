@@ -14,25 +14,31 @@ class MainWindow : JFrame() {
         defaultCloseOperation = EXIT_ON_CLOSE
         title = "Чат"
         minimumSize = Dimension(100, 350)
-        val comment="Введите сообщение:"
+        val comment = "Введите сообщение:"
         val textField = TextField(comment)
         val textArea = TextArea()
-        textArea.setEditable(false);
+        textArea.isEditable = false
         textField.addFocusListener(object : FocusListener {
             override fun focusGained(e: FocusEvent) {
                 textField.text = ""
             }
+
             override fun focusLost(e: FocusEvent?) {
             }
         })
         val button = JButton("Отправить")
         button.addActionListener {
-            if (textField.text != comment && textField.text!=""){
-            textArea.append("Вы: ${textField.text}\n")
-            client.send(textField.text)
-            textField.text = comment}
+            if (textField.text != comment && textField.text != "") {
+                textArea.append("Вы: ${textField.text}\n")
+                if (textField.text != "STOP") {
+                    client.send(textField.text)
+                    textField.text = comment
+                } else {
+                    client.stop()
+                }
+            }
         }
-        setResizable(false);
+        isResizable = false
         val mainPanel = JPanel()
 
         val layout = GroupLayout(mainPanel)
@@ -92,8 +98,9 @@ class MainWindow : JFrame() {
         client.addMessageListener { data ->
             val typeMessage = data.split(",", limit = 2)
             if (typeMessage[0] == "matrices") client.send(
-                Matrx().matr(data)
+                Matrix().matrix(data)
             ) else textArea.append(data + "\n")
         }
     }
 }
+

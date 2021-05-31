@@ -1,75 +1,71 @@
 import kotlin.math.round
-import kotlin.reflect.jvm.internal.impl.load.kotlin.JvmType
-import kotlin.collections.List as List1
 
-class Matrx() {
-    init {
-    }
+class Matrix {
 
-    fun matr(data: String): String {
+    fun matrix(data: String): String {
         val typeMessage = data.split(",", limit = 2)
         val cmd = typeMessage[1].split(",", limit = 2)
         val col = cmd[1].split(",", limit = 2)
         val row = col[1].split(",", limit = 2)
         val volume = row[1].split("|", limit = 2)
-        val matrx = volume[1].split("/", limit = 2)
-        val matrx1 = matrx[0].split(";")
-        val matrx2 = matrx[1].split(";")
+        val matrix = volume[1].split("/", limit = 2)
+        val matrix1 = matrix[0].split(";")
+        val matrix2 = matrix[1].split(";")
         var result = ""
         when (cmd[0]) {
             "SUM" -> {
-                result = sum(matrx1, matrx2)
+                result = sum(matrix1, matrix2)
             }
             "PRD" -> {
-                result = prd(matrx1, matrx2, col[0].toInt())
+                result = prd(matrix1, matrix2, col[0].toInt())
             }
             "NUM" -> {
-                result = num(matrx1, volume[0].toDouble())
+                result = num(matrix1, volume[0].toDouble())
             }
         }
-        result = data + "=" + result
+        result = "$data=$result"
         return result
     }
 
     // сложение матриц
-    fun sum(matrx1: kotlin.collections.List<String>, matrx2: kotlin.collections.List<String>): String {
-        var matrxOut = ""
+    private fun sum(matrix1: List<String>, matrix2: List<String>): String {
+        var matrixOut = ""
         var i = 0
-        matrx1.forEach {
-            matrxOut += (round((it.toDouble() + matrx2[i].toDouble())) * 100.0 / 100.0).toString() + ";"
+        matrix1.forEach {
+            matrixOut += (round((it.toDouble() + matrix2[i].toDouble())) * 100.0 / 100.0).toString() + ";"
             i++
         }
-        return matrxOut.substring(0, matrxOut.length - 1)
+        return matrixOut.substring(0, matrixOut.length - 1)
     }
 
     // умножение матриц
-    fun prd(matrx1: kotlin.collections.List<String>, matrx2: kotlin.collections.List<String>, cols: Int): String {
-        var matrxOut: String = ""
-        val tmp: Array<Double> = Array(matrx1.size) { 0.0 }
+    private fun prd(matrix1: List<String>, matrix2: List<String>, cols: Int): String {
+        var matrixOut = ""
+        val tmp: Array<Double> = Array(matrix1.size) { 0.0 }
         var rowsN = 0
         var k = 0
-        for (j in 0..matrx1.size - 1) {
-            for (i in 0..cols - 1) {
-                tmp[j] = tmp[j] + matrx1[i + rowsN].toDouble() * matrx2[cols * i + k].toDouble()
+        for (j in matrix1.indices) {
+            for (i in 0 until cols) {
+                tmp[j] = tmp[j] + matrix1[i + rowsN].toDouble() * matrix2[cols * i + k].toDouble()
             }
             k++
             if (k == cols) {
-                rowsN = rowsN + cols
+                rowsN += cols
                 k = 0
             }
         }
         tmp.forEach {
-            matrxOut += (round(it * 100.0) / 100.0).toString() + ";"
+            matrixOut += (round(it * 100.0) / 100.0).toString() + ";"
         }
-        return matrxOut.substring(0, matrxOut.length - 1)
+        return matrixOut.substring(0, matrixOut.length - 1)
     }
 
     // умножение матрицы на число
-    fun num(matrx1: kotlin.collections.List<String>, volue: Double): String {
-        var matrxOut = ""
-        matrx1.forEach {
-            matrxOut += (round((it.toDouble() * volue) * 100.0) / 100.0).toString() + ";"
+    private fun num(matrix1: List<String>, volume: Double): String {
+        var matrixOut = ""
+        matrix1.forEach {
+            matrixOut += (round((it.toDouble() * volume) * 100.0) / 100.0).toString() + ";"
         }
-        return matrxOut.substring(0, matrxOut.length - 1)
+        return matrixOut.substring(0, matrixOut.length - 1)
     }
 }

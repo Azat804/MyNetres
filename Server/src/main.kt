@@ -1,29 +1,26 @@
-import java.io.BufferedReader
-import java.io.InputStreamReader
 import java.util.*
-import kotlin.concurrent.thread
+import kotlinx.coroutines.*
 
-fun main() {
+suspend fun main() {
     val dbh = DBHelper(dbName = "Matrix")
+    dbh.connect()
     dbh.createDatabase()
-    var cols = 0
-    var rows = 0
-    var rowStart = 0
-    var colStart = 0
-    var numMatr: Int // кол-во матриц
-    var mult: Double // множитель
-    var id = 0
-    var id_matr = 1
+    var cols: Int
+    var rows: Int
+    var numMatrix: Int
+    var multiplier: Double
+    var id: Int
+    var idMatrix: Int
     var portion1: String
     var portion2: String
     val s = Server()
-    s.addMessageListener { data -> dbh.output(s.dataProcessing(data)) }
+    s.addMessageListener { data -> dbh.insertTablesResult(runBlocking {s.dataProcessing(data)})}
     s.start()
     var cmd: String
     var data = ""
     val sc = Scanner(System.`in`)
     do {
-        var matr = ""
+        var sourceMatrix = ""
         println("Команды операций над матрицами (SUM  - суммирование, PRD  - произведение, NUM - умножение на число), STOP - остановка сервера.\nВведите команду:")
         cmd = sc.nextLine()
         do {
@@ -36,79 +33,72 @@ fun main() {
         if (cmd == "SUM" || cmd == "PRD" || cmd == "NUM") {
             dbh.connect()
             dbh.dropTablesResult()
-            mult = 0.0
-            println("Введите размеры матриц:")
+            multiplier = 0.0
             println("Введите количество столбцов:")
             cols = sc.nextLine().toInt()
             println("Введите количество строк:")
             rows = sc.nextLine().toInt()
             if (cmd == "NUM") {
-                numMatr = 1
+                numMatrix = 1
                 println("Введите множитель:")
-                mult = sc.nextLine().toDouble()
+                multiplier = sc.nextLine().toDouble()
             } else {
-                numMatr = 2
+                numMatrix = 2
             }
-            dbh.createTablesOutput(cols)
-            for (i in 1..numMatr) {
+            dbh.createTablesResult(cols)
+            for (i in 1..numMatrix) {
                 println("Введите номер $i матрицы:")
-                id_matr = sc.nextLine().toInt()
-                println("Введите начальные точки матрицы:")
-                println("Номер строки $i матрицы:")
-                rowStart = sc.nextLine().toInt()
-                println("Номер столбца $i матрицы:")
-                colStart = sc.nextLine().toInt()
-                if (i > 1)
-                    matr = matr + "/" + dbh.result(rows, cols, rowStart, colStart, id_matr)
-                else
-                    matr = matr + dbh.result(rows, cols, rowStart, colStart, id_matr)
+                idMatrix = sc.nextLine().toInt()
+                sourceMatrix += if (i > 1) {
+                    "/" + dbh.readingData(rows, cols, idMatrix)
+                } else {
+                    dbh.readingData(rows, cols, idMatrix)
+                }
             }
-            if (numMatr == 1) matr = matr + "/"
-            println("Исходная матрица: " + matr)
-            val matrx = matr.split("/", limit = 2)
-            val matrx1Portion = matrx[0].split(";")
-            val matrx2Portion = matrx[1].split(";")
-            var k = 0
+            if (numMatrix == 1) sourceMatrix += "/"
+            println("Исходная матрица: $sourceMatrix")
+            val matrix = sourceMatrix.split("/", limit = 2)
+            val matrix1Portion = matrix[0].split(";")
+            val matrix2Portion = matrix[1].split(";")
             val rws = 1 //задает кол-во строк в порции
-            for (i in (1..rows)) {
+            for (i in (0 until rows)) {
                 portion1 = ""
                 portion2 = ""
-                for (j in k * cols..(k * cols + cols) - 1) {
-                    portion1 += matrx1Portion[j] + ";"
+                for (j in i * cols until (i * cols + cols)) {
+                    portion1 += matrix1Portion[j] + ";"
                     if (cmd != "NUM" && cmd != "PRD") {
-                        portion2 += matrx2Portion[j] + ";"
+                        portion2 += matrix2Portion[j] + ";"
                     }
                 }
-                k++
                 if (cmd == "SUM") {
-                    data = ("matrices," + cmd + "," + cols + "," + rws + "," + mult + "|" + portion1.substring(
+                    data = ("matrices,$cmd,$cols,$rws,$multiplier|" + portion1.substring(
                         0, portion1.length - 1
                     ) + "/" + portion2.substring(0, portion2.length - 1))
                 }
                 if (cmd == "NUM") {
-                    data = ("matrices," + cmd + "," + cols + "," + rws + "," + mult + "|" + portion1.substring(
+                    data = ("matrices,$cmd,$cols,$rws,$multiplier|" + portion1.substring(
                         0,
                         portion1.length - 1
                     )) + "/"
                 }
                 if (cmd == "PRD") {
-                    data = ("matrices," + cmd + "," + cols + "," + rws + "," + mult + "|" + portion1.substring(
+                    data = ("matrices,$cmd,$cols,$rws,$multiplier|" + portion1.substring(
                         0, portion1.length - 1
-                    ) + "/" + matrx[1])
+                    ) + "/" + matrix[1])
                 }
-                println("Отправлено на расчет порция клиенту: [$id] " + data)
-
+                println("Отправлено на расчет порция клиенту: [$id] $data")
                 do {
-                    if (s.poritionStart()) {
+                    if (s.startPortion && data.trim().isNotEmpty()) {
                         s.clearList()
                         if (id == 0) {
-                            s.senData(data)
+                            s.senData(data) //отправка всем клиентам
                         } else {
-                            s.send(id, data)
+                            s.send(id, data) //адресная отправка
                         }
-                        Thread.sleep(3000)
+                        data = ""
                     }
-                } while (!s.poritionStart())
+                    delay(1000) //задержка, чтобы поймать момент переключения флажка startportion
+                } while (!s.startPortion)
             }
         } else { // для простого сообщения
             if (id == 0) s.senData(cmd)

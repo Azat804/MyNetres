@@ -1,24 +1,23 @@
 import java.net.Socket
-////
-import java.util.ArrayList
 
 class Client(
-    val host: String,
-    val port: Int
+    host: String,
+    port: Int
 ) {
     private val socket: Socket
-     val communicator: SocketIO
-    val messageListeners = mutableListOf<(String)-> Unit>()
-    init{
+    private val communicator: SocketIO
+    private val messageListeners = mutableListOf<(String) -> Unit>()
+
+    init {
         socket = Socket(host, port)
         communicator = SocketIO(socket)
     }
 
-    fun stop(){
+    fun stop() {
         communicator.stop()
     }
 
-    fun start(){
+    fun start() {
         communicator.addMessageListener {
             messageListeners.forEach { l -> l(it) }
         }
@@ -29,14 +28,11 @@ class Client(
         communicator.sendData(data)
     }
 
-    fun addMessageListener(l:(String)-> Unit){
+    fun addMessageListener(l: (String) -> Unit) {
         messageListeners.add(l)
     }
-    fun addSessionFinishedListener(l: ()->Unit){
-        communicator.addSocketClosedListener(l)
-    }
 
-    fun removeSessionFinishedListener(l: ()->Unit){
-        communicator.removeSocketClosedListener(l)
+    fun addSessionFinishedListener(l: () -> Unit) {
+        communicator.addSocketClosedListener(l)
     }
 }
